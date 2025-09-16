@@ -107,8 +107,29 @@ class MCalc:
             }
         else:
             return {"minority_avg": 0.0, "minority_min": 0.0}
+        
+    def _mean_median_test(self):
+        dem_shares = self.districts["CompDemVot"] / (
+                self.districts["CompDemVot"] + self.districts["CompRepVot"]
+            )
+        rep_shares = self.districts["CompRepVot"] / (
+                self.districts["CompDemVot"] + self.districts["CompRepVot"]
+            )
 
-    def calculate_metrics(self):
+        dem_mean_share = dem_shares.mean()
+        dem_median_share = dem_shares.median()
+
+        rep_mean_share = rep_shares.mean()
+        rep_median_share = rep_shares.median()
+
+        res =  {
+            "dem_mm": dem_mean_share - dem_median_share,
+            "rep_mm": rep_mean_share - rep_median_share
+        }
+
+        return res
+
+    def calculate_metrics(self, baseline=False):
         eg = self._efficiency_gap()
         papr = self._partisan_proportionality()
         svr = self._seats_votes_difference()
@@ -125,8 +146,13 @@ class MCalc:
             "MinOppMin": mod["minority_min"]
         }
 
+        if baseline:
+            mm = self._mean_median_test()
+            metrics = {
+                **metrics,
+                "MeanMedianDem": mm["dem_mm"],
+                "MeanMedianRep": mm["rep_mm"]
+            }
+
         res = pd.DataFrame([metrics])
         res.to_csv(f"{self.basepath}/{self.state}/district_summary_metrics.csv", index=False)
-
-mc = MCalc("sc", "/home/arun/echo/thesis/data/processed")
-mc.calculate_metrics()
