@@ -156,3 +156,6 @@ class MCalc:
 
         res = pd.DataFrame([metrics])
         res.to_csv(f"{self.basepath}/{self.state}/district_summary_metrics.csv", index=False)
+
+mc = MCalc("az", "/home/arun/echo/thesis/data/processed")
+mc.calculate_metrics(baseline=True)

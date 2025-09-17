@@ -2,6 +2,7 @@ import geopandas as gpd
 import pandas as pd
 import gerrychain as gc
 from gerrychain.updaters import Tally, Election, cut_edges
+import networkx as nx
 
 def build_precinct_graph(state, basepath):
     precincts = gpd.read_file(f"{basepath}/{state}/precincts_with_vap.shp")
@@ -12,6 +13,7 @@ def build_precinct_graph(state, basepath):
 
     attr_cols = [
         "CONG_DIST",
+        "P0010001",
         "P0040001",
         "CompDemVot",
         "CompRepVot",
@@ -33,7 +35,8 @@ def build_precinct_graph(state, basepath):
     assignment = {node: data["CONG_DIST"] for node, data in graph.nodes(data=True)}
 
     updaters_dict = {
-        "population": Tally("P0040001", alias="population"),
+        "population": Tally("P0010001", alias="population"),
+        "voting_population": Tally("P0040001", alias="voting_population"),
         "DemVotes": Tally("CompDemVot", alias="DemVotes"),
         "RepVotes": Tally("CompRepVot", alias="RepVotes"),
 
@@ -50,7 +53,29 @@ def build_precinct_graph(state, basepath):
 
     return graph, partition
 
+def validate_precinct_graph(graph, partition, tolerance=0.05):
+    results = {"contiguous": {}, "population_balance": {}, "overall": True}
 
-basepath = "/home/arun/echo/thesis/data/processed"
-state = "az"
-graph, partition = build_precinct_graph(state, basepath)
+    for dist, nodes in partition.parts.items():
+        subgraph = graph.subgraph(nodes)
+        is_contig = nx.is_connected(subgraph)
+        results["contiguous"][dist] = is_contig
+        if not is_contig:
+            results["overall"] = False
+
+    total_pop = sum(partition["population"].values())
+    num_districts = len(partition.parts)
+    ideal_pop = total_pop / num_districts
+
+    for dist, pop in partition["population"].items():
+        deviation = (pop - ideal_pop) / ideal_pop
+        within_tol = abs(deviation) <= tolerance
+        results["population_balance"][dist] = {
+            "population": pop,
+            "deviation": deviation,
+            "within_tolerance": within_tol
+        }
+        if not within_tol:
+            results["overall"] = False
+
+    return results
