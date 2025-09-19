@@ -17,6 +17,12 @@ def build_precinct_graph(state, basepath):
         "P0040001",
         "CompDemVot",
         "CompRepVot",
+        "P0040002",
+        "P0040005",
+        "P0040006",
+        "P0040007",
+        "P0040008",
+        "P0040009",
         "ptP0040002",
         "ptP0040005",
         "ptP0040006",
@@ -31,7 +37,7 @@ def build_precinct_graph(state, basepath):
         cols_to_add=[col for col in attr_cols if col in precincts.columns],
         reproject=False
     )
-
+    
     assignment = {node: data["CONG_DIST"] for node, data in graph.nodes(data=True)}
 
     updaters_dict = {
@@ -53,7 +59,7 @@ def build_precinct_graph(state, basepath):
 
     return graph, partition
 
-def validate_precinct_graph(graph, partition, tolerance=0.05):
+def validate_precinct_graph(graph: gc.Graph, partition: gc.Partition, tolerance=0.05):
     results = {"contiguous": {}, "population_balance": {}, "overall": True}
 
     for dist, nodes in partition.parts.items():
