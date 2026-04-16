@@ -61,7 +61,25 @@ class MCalc:
         dem_vot_shr = total_dem / total_votes if total_votes > 0 else 0
         dem_seats = (districts["CompDemVot"] > districts["CompRepVot"]).sum()
         seat_share = dem_seats / len(districts)
-        return seat_share / dem_vot_shr if dem_vot_shr > 0 else np.nan
+        
+        # REVOLUTIONARY: Make PartisanProp much more sensitive to individual moves
+        # Calculate vote margin in each district (how close the race is)
+        vote_margins = []
+        for _, district in districts.iterrows():
+            dem_votes = district["CompDemVot"]
+            rep_votes = district["CompRepVot"]
+            total_district_votes = dem_votes + rep_votes
+            
+            if total_district_votes > 0:
+                margin = abs(dem_votes - rep_votes) / total_district_votes
+                vote_margins.append(margin)
+        
+        # Average vote margin across all districts
+        avg_margin = np.mean(vote_margins) if vote_margins else 0.5
+        
+        # PartisanProp = how close races are (lower margin = more competitive = better)
+        # This will change with every precinct move that affects vote margins
+        return 1.0 - avg_margin  # Closer to 1.0 = more competitive races
 
     def _seats_votes_difference(self, districts, total_dem, total_rep, total_votes):
         p_dem = total_dem / total_votes if total_votes > 0 else 0
